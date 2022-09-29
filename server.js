@@ -4,7 +4,19 @@ const cookieSession = require('cookie-session');
 const app = express();
 const passportSetup = require('./passport')
 const cors = require('cors');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const dotenv = require('dotenv');
+const userdatas = require('./model');
+const tasks = require('./tasksModel');
 
+const bcrypt = require('bcryptjs');
+const validator = require('validator');
+const JWT = require('jsonwebtoken');
+
+
+dotenv.config({ path: './config.env' });
+const URI = process.env.URI;
 
 app.use(
     cookieSession({
@@ -16,123 +28,209 @@ app.use(
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(passport.initialize());
 app.use(passport.session())
+app.use(express.json());
+app.use(cookieParser());
 
 
-app.get("/auth/login/success", (req, res) => {
+mongoose.connect(URI);
+
+mongoose.connection.once('open', () => {
+  console.log('data base connestion is done');
+ 
+})
+
+
+const generateToken = async (adminEmail, savedData) => {
+    // console.log(`generate token : ${savedData}`)
+    try {
+      const assignedToken = JWT.sign({ adminEmail }, process.env.SECRET_KEY);
+      savedData.tokens = await savedData.tokens.concat({ token: assignedToken });
+      await savedData.save();
   
-	if (req.user) {
-
-		res.status(200).json({
-			error: false,
-			message: "Successfully Loged In",
-			user: req.user,
-		});
-	} else {
-		res.status(403).json({ error: true, message: "Not Authorized" });
-	}
-});
-
-
-
+      // console.log(`generate token : ${token}`)
   
-  
+      return assignedToken;
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
-//     if (req.user) {
-//       const data = req.user;
-//       console.log('req.user email')
-//       console.log(data[4])
 
-//       for(let key in data) { 
-//       var emails =  data['emails'];
-//       // console.log(emails[0].value) 
-//       }
-//       console.log(emails[0].value) 
 
-//       const googleUserPresentOrNot = await googleUsers.findOne({
-//         email: emails[0].value,
-//         // password: password,
-//       });
+app.get('/', (req, res) => {
+    console.log('hi from the server');
+    res.json('hi from server');
+  });
 
-//       console.log('googleuserpresentornot')
-//       console.log(googleUserPresentOrNot)
+app.post('/savetasks',async(req,res) => {
+  const {twitterFollow,joinTelegram,retweet,tweet,walletAddress} = req.body;
 
-//       if(googleUserPresentOrNot){
-//         return;
-//       }else{
-
-//         const google = new googleUsers({
-//           email : emails[0].value
-//         });
-//         const googleMail = await google.save();
-//       }
-
-     
-
-//       res.status(200).json({
-//         error: false,
-//         message: "Successfully Loged In",
-//         user: req.user,
-//       });
-//     } else {
-//       res.status(403).json({ error: true, message: "Not Authorized" });
-//     }
-  
-// });
-
-app.post('/googlelogins',async (req,res)=>{
-  console.log('req.body')
   console.log(req.body)
-  try{
+ 
 
-    const googleUserPresentOrNot = await googleUsers.findOne({
-              email: req.body.email,
-              
-            });
-      
-            console.log('googleuserpresentornot')
-            console.log(googleUserPresentOrNot)
-      
-            if(googleUserPresentOrNot){
-              return;
-            }else{
-      
-              const google = new googleUsers({
-                email : req.body.email,
-              });
-              const googleMail = await google.save();
-            }
-  
-            res.status(200).send('google login emails is saved in database');
-  }catch(err){
+  if(twitterFollow && joinTelegram && retweet && tweet && walletAddress){
+    console.log('inside the savetasks block')
+    console.log(twitterFollow,joinTelegram,retweet,tweet,walletAddress)
+
+    try {
+      const tasksData = new tasks({
+        twitterFollow: twitterFollow,
+        joinTelegram: joinTelegram,
+        retweet: retweet,
+        tweet: tweet,
+        walletAddress: walletAddress,
+      });
+      const savedData = await tasksData.save();
+      res.send(savedData);
+
+  }catch (err) {
     console.log(err);
   }
 
-})
+  
+}})
 
-app.get("/login/failed", (req, res) => {
-	res.status(401).json({
-		error: true,
-		message: "Log in failure",
-	});
-});
-
-app.get("/google", passport.authenticate("google", ["profile", "email"]));
-
-app.get(
-	"/auth/google/callback",
-	passport.authenticate("google", {
-		successRedirect: 'http://localhost:3000/',
-		failureRedirect: "/login/failed",
-	})
-);
-
-app.get("/auth/logout", (req, res) => {
-	req.logout();
-  res.status(200).redirect('http://localhost:3000/');
-});
-
-
-
-app.listen(8080, () => {
-    console.log('server is run on port 8080');
+  app.post('/createuser', async (req, res) => {
+    const data = req.body;
+    const adminEmail = data.adminEmail;
+    const password = data.password;
+  
+    
+  
+    console.log(data);
+  
+    if (!adminEmail || !password) {
+      return res.status(202).json({ message: 'please enter full credentials' });
+    }
+  
+    if(validator.isEmail(adminEmail)){
+  
+    
+  
+    const userPresentORnotPresent = await userdatas.findOne({
+      adminEmail: adminEmail,
+    });
+    
+    if (userPresentORnotPresent) {
+      return res.status(204).send('email is already registered');
+    }
+  
+    try {
+      const userData = new userdatas({
+        adminEmail: adminEmail,
+        password: password,
+      });
+      const savedData = await userData.save();
+  
+      const generatedToken = await generateToken(adminEmail, savedData);
+      if (generatedToken) {
+        res.cookie('jwtToken', generatedToken, {
+          expires: new Date(Date.now() + 12222222),
+          httpOnly: true,
+          sameSite: 'none',
+          secure: true,
+        });
+        // res.status(200).json({message:"registered successfully"})
+        console.log(savedData);
+        res.status(200).send(savedData);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  
+  }else{
+    return res.status(208).json({ message: 'email is not valid please type valid email' });
+  }
   });
+
+  app.post('/login', async (req, res) => {
+
+    try{
+  
+    
+  
+    const data = req.body;
+    const adminEmail = data.adminEmail;
+    const password = data.password;
+    console.log('password');
+    console.log(password);
+  
+    if (!adminEmail || !password) {
+      return res.status(202).json({ message: 'please enter full credentials' });
+      // return res.status(400).json({ message: 'please enter full credentials' });
+    }
+  
+    if(validator.isEmail(adminEmail)){
+    
+    try {
+      const userPresentORnotPresent = await userdatas.findOne({
+        adminEmail: adminEmail,
+        // password: password,
+      });
+  
+      // console.log('userpresetornotpresent');
+      // console.log(userPresentORnotPresent);
+  
+      if (userPresentORnotPresent) {
+  
+        const passwordIsMatchOrNot = await bcrypt.compare(password , userPresentORnotPresent.password)
+        console.log('passwordismatchornot');
+        console.log(passwordIsMatchOrNot)
+  
+        if(passwordIsMatchOrNot){
+  
+        
+        const generatedToken = await generateToken(
+          adminEmail,
+          userPresentORnotPresent
+        );
+        if (generatedToken) {
+          res.cookie('jwtToken', generatedToken, {
+            expires: new Date(Date.now() + 12222222),
+            httpOnly: true,
+            sameSite: 'none',
+            secure: true,
+          });
+          // res.status(200).json({message:"registered successfully"})
+        }
+        res.status(200).send(userPresentORnotPresent);
+        // return  res.status(200).json({userData : userPresentORnotPresent,message : "user logged in  successfully"})
+      }else{
+        return res.status(210).json({ message: 'password is invalid' });
+      }
+      } else {
+        return res.status(204).json({
+          message: 'email is not registered please create your account',
+        });
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }else{
+    return res.status(208).json({ message: 'email is not valid please type valid email' });
+  }
+  
+  
+    }catch(err){
+      console.log(err)
+    }
+  
+  
+  });
+
+
+  app.get('/logout', (req, res) => {
+    res.clearCookie('jwtToken', {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+    });
+  
+    res.status(200).send('user sign out succesfully');
+  });
+
+
+
+app.listen(8000, () => {
+    console.log('server is run on port 8080');
+})
