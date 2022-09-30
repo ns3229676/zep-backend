@@ -2,6 +2,10 @@ const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
 
 const taskSchema = mongoose.Schema({
+    loggedUserData : {
+        type : String,
+        required: true,
+    },
     twitterFollow : {
         type: Boolean,
         required: true,

@@ -62,18 +62,57 @@ app.get('/', (req, res) => {
     res.json('hi from server');
   });
 
+app.post('/gettasksdata',async(req,res)=>{
+
+  const loggedUserData = req.body.data
+
+  console.log('req.body for get tasks')
+  console.log(req.body)
+
+ 
+  
+  const userPresentORnotPresent = await tasks.findOne({
+    loggedUserData: loggedUserData,
+  });
+
+  console.log('userpresentornot')
+  console.log(userPresentORnotPresent)
+
+  if (userPresentORnotPresent) {
+    return res.status(200).send(userPresentORnotPresent);
+  }
+
+  })
+
+  app.get('/adminloginorlogout', async (req, res) => {
+    try {
+      const getedToken = req.cookies.jwtToken;
+      const verifiedToken = JWT.verify(getedToken, process.env.SECRET_KEY);
+      console.log('verifiedToken :');
+      console.log(verifiedToken);
+      // console.log('getedToken')
+      // console.log(getedToken)
+      res.status(200).send(verifiedToken.adminEmail);
+    } catch (err) {
+      console.log(err);
+    }
+  });
+  
+
+
 app.post('/savetasks',async(req,res) => {
-  const {twitterFollow,joinTelegram,retweet,tweet,walletAddress} = req.body;
+  const {twitterFollow,joinTelegram,retweet,tweet,walletAddress,loggedUserData} = req.body;
 
   console.log(req.body)
  
 
-  if(twitterFollow && joinTelegram && retweet && tweet && walletAddress){
+  if(twitterFollow && joinTelegram && retweet && tweet && walletAddress && loggedUserData){
     console.log('inside the savetasks block')
     console.log(twitterFollow,joinTelegram,retweet,tweet,walletAddress)
 
     try {
       const tasksData = new tasks({
+        loggedUserData : loggedUserData,
         twitterFollow: twitterFollow,
         joinTelegram: joinTelegram,
         retweet: retweet,
