@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const userdatas = require('./model');
 const tasks = require('./tasksModel');
-
+const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const validator = require('validator');
 const JWT = require('jsonwebtoken');
@@ -62,6 +62,99 @@ app.get('/', (req, res) => {
     res.json('hi from server');
   });
 
+
+app.post('/checktweet',(req,res)=>{
+  const {tweetId} = req.body;
+  const config = {
+    method: 'get',
+    url: 'https://api.twitter.com/2/tweets/' + tweetId ,
+    headers: {
+      Authorization: 'Bearer AAAAAAAAAAAAAAAAAAAAAKRDhQEAAAAA9oKKdd9st2Veb53S%2BybkGn2z%2BZ8%3DXnCvsEJ1ekX0BZeCYuWjbqOtsAqircfWCMB7KsjtEMZaxRDaN1',
+      Cookie: 'guest_id=v1%3A166391365524337597'
+      }
+  };
+  
+  axios(config)
+  .then(function (response) {
+    // console.log(JSON.stringify(response.data));
+    // console.log(response.data)
+    const data = response.data
+    console.log(data.config)
+    // console.log(JSON.stringify(data))
+    
+    res.send(data)
+    
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+  
+})
+
+
+app.post('/checkretweeted',(req,res)=>{
+
+ console.log('check retweeted')
+ 
+
+ const {checkRetweet} = req.body
+ 
+
+ const config = {
+  method: 'get',
+  url: 'https://api.twitter.com/2/tweets/' + checkRetweet + '/retweeted_by',
+  headers: { 
+    'Authorization': 'Bearer AAAAAAAAAAAAAAAAAAAAAKRDhQEAAAAA9oKKdd9st2Veb53S%2BybkGn2z%2BZ8%3DXnCvsEJ1ekX0BZeCYuWjbqOtsAqircfWCMB7KsjtEMZaxRDaN1', 
+    'Cookie': 'guest_id=v1%3A166428734430673756'
+  }
+};
+
+axios(config)
+.then(function (response) {
+  // console.log(JSON.stringify(response.data));
+  console.log(response.data)
+  res.send(response.data)
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+})
+
+
+
+
+
+
+app.post('/checkfollower',async (req,res)=>{
+
+  const {checkFollower} = req.body;
+
+  console.log('check follower api request')
+  console.log(checkFollower)
+    
+
+const config = {
+  method: 'get',
+  url: 'https://api.twitter.com/1.1/friendships/show.json?source_screen_name=zepcoinofficial&target_screen_name=' + checkFollower,
+  headers: {
+    Authorization: 'Bearer AAAAAAAAAAAAAAAAAAAAAKRDhQEAAAAA9oKKdd9st2Veb53S%2BybkGn2z%2BZ8%3DXnCvsEJ1ekX0BZeCYuWjbqOtsAqircfWCMB7KsjtEMZaxRDaN1',
+    Cookie: 'guest_id=v1%3A166391365524337597'
+    }
+};
+
+axios(config)
+.then(function (response) {
+  console.log(JSON.stringify(response.data));
+  res.send(JSON.stringify(response.data))
+})
+.catch(function (error) {
+  console.log(error);
+});
+
+
+  })
+
 app.post('/gettasksdata',async(req,res)=>{
 
   const loggedUserData = req.body.data
@@ -83,6 +176,8 @@ app.post('/gettasksdata',async(req,res)=>{
   }
 
   })
+
+  
 
   app.get('/adminloginorlogout', async (req, res) => {
     try {
@@ -271,5 +366,5 @@ app.post('/savetasks',async(req,res) => {
 
 
 app.listen(8000, () => {
-    console.log('server is run on port 8080');
+    console.log('server is run on port 8000');
 })
