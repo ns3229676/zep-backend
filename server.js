@@ -8,12 +8,16 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const userdatas = require('./model');
-const tasks = require('./tasksModel');
 const axios = require('axios');
 const bcrypt = require('bcryptjs');
 const validator = require('validator');
 const JWT = require('jsonwebtoken');
 
+const followtasks = require('./followtaskmodel')
+const tweettasks = require('./tweettaskmodel')
+const retweettasks = require('./retweettaskmodel')
+const walletaddresstasks = require('./walletaddresstaskmodel')
+const telegramtasks = require('./telegramtaskmodel')
 
 dotenv.config({ path: './config.env' });
 const URI = process.env.URI;
@@ -63,6 +67,79 @@ app.get('/', (req, res) => {
   });
 
 
+  app.post('/fetchfollowtaskresponse',async (req,res)=>{
+    const {loggedUserData} = req.body;
+
+    const followTaskresponse = await followtasks.findOne({
+      loggedUserData : loggedUserData
+    });
+
+    console.log('followTaskresponse')
+    console.log(followTaskresponse)
+
+    console.log('loggeduserdata')
+    console.log(loggedUserData)
+
+    res.json(followTaskresponse)
+
+   
+  })
+
+  app.post('/fetchretweetTaskresponse',async (req,res)=>{
+    const {loggedUserData} = req.body;
+
+    const retweetTaskresponse = await retweettasks.findOne({
+      loggedUserData: loggedUserData,
+    });
+
+   console.log('fetchretweetTaskresponse')
+   console.log(retweetTaskresponse)
+
+    res.json(retweetTaskresponse)
+
+   
+  })
+
+
+  app.post('/fetchwalletAddressresponse',async (req,res)=>{
+    const {loggedUserData} = req.body;
+
+    const walletAddressresponse = await walletaddresstasks.findOne({
+      loggedUserData: loggedUserData,
+    });
+
+
+   
+
+    
+
+    res.json(walletAddressresponse)
+
+   
+  })
+
+
+  app.post('/fetchtweettaskresponse',async (req,res)=>{
+    const {loggedUserData} = req.body;
+
+    const tweetTaskresponse = await tweettasks.findOne({
+      loggedUserData: loggedUserData,
+    });
+
+
+   
+
+    
+
+    res.json(tweetTaskresponse)
+
+   
+  })
+
+
+
+
+
 app.post('/checktweet',(req,res)=>{
   const {tweetId} = req.body;
   const config = {
@@ -79,22 +156,51 @@ app.post('/checktweet',(req,res)=>{
     // console.log(JSON.stringify(response.data));
     // console.log(response.data)
     const data = response.data
-    console.log(data.config)
+    if(data?.data?.id === '1577183218402742272'){
+      res.send(true)
+    }else{
+      res.send(false)
+    }
+
+
+    
     // console.log(JSON.stringify(data))
     
-    res.send(data)
+
     
   })
   .catch(function (error) {
+    console.log('error')
     console.log(error);
   });
   
 })
 
 
+app.post('/savetweettaskstatus',async (req,res)=>{
+ 
+  console.log('savetweettask')
+  console.log(req.body)
+
+  try {
+    const tweettask = new tweettasks({
+      loggedUserData : req.body.loggedUserData,
+      tweet : req.body.tweet,
+    });
+    const savedData = await tweettask.save();
+    res.send(savedData);
+
+}catch (err) {
+  console.log(err);
+
+}
+
+
+})
+
 app.post('/checkretweeted',(req,res)=>{
 
- console.log('check retweeted')
+//  console.log('check retweeted')
  
 
  const {checkRetweet} = req.body
@@ -112,7 +218,7 @@ app.post('/checkretweeted',(req,res)=>{
 axios(config)
 .then(function (response) {
   // console.log(JSON.stringify(response.data));
-  console.log(response.data)
+  // console.log(response.data)
   res.send(response.data)
 })
 .catch(function (error) {
@@ -130,8 +236,8 @@ app.post('/checkfollower',async (req,res)=>{
 
   const {checkFollower} = req.body;
 
-  console.log('check follower api request')
-  console.log(checkFollower)
+  // console.log('check follower api request')
+  // console.log(checkFollower)
     
 
 const config = {
@@ -145,37 +251,23 @@ const config = {
 
 axios(config)
 .then(function (response) {
-  console.log(JSON.stringify(response.data));
+  // console.log(JSON.stringify(response.data));
+  console.log(response.data)
+
+ 
+
   res.send(JSON.stringify(response.data))
 })
 .catch(function (error) {
+  console.log('error of check follower api')
   console.log(error);
+  res.json({error : 404})
 });
 
 
   })
 
-app.post('/gettasksdata',async(req,res)=>{
 
-  const loggedUserData = req.body.data
-
-  console.log('req.body for get tasks')
-  console.log(req.body)
-
- 
-  
-  const userPresentORnotPresent = await tasks.findOne({
-    loggedUserData: loggedUserData,
-  });
-
-  console.log('userpresentornot')
-  console.log(userPresentORnotPresent)
-
-  if (userPresentORnotPresent) {
-    return res.status(200).send(userPresentORnotPresent);
-  }
-
-  })
 
   
 
@@ -183,8 +275,8 @@ app.post('/gettasksdata',async(req,res)=>{
     try {
       const getedToken = req.cookies.jwtToken;
       const verifiedToken = JWT.verify(getedToken, process.env.SECRET_KEY);
-      console.log('verifiedToken :');
-      console.log(verifiedToken);
+      // console.log('verifiedToken :');
+      // console.log(verifiedToken);
       // console.log('getedToken')
       // console.log(getedToken)
       res.status(200).send(verifiedToken.adminEmail);
@@ -195,34 +287,73 @@ app.post('/gettasksdata',async(req,res)=>{
   
 
 
-app.post('/savetasks',async(req,res) => {
-  const {twitterFollow,joinTelegram,retweet,tweet,walletAddress,loggedUserData} = req.body;
 
-  console.log(req.body)
- 
 
-  if(twitterFollow && joinTelegram && retweet && tweet && walletAddress && loggedUserData){
-    console.log('inside the savetasks block')
-    console.log(twitterFollow,joinTelegram,retweet,tweet,walletAddress)
 
-    try {
-      const tasksData = new tasks({
-        loggedUserData : loggedUserData,
-        twitterFollow: twitterFollow,
-        joinTelegram: joinTelegram,
-        retweet: retweet,
-        tweet: tweet,
-        walletAddress: walletAddress,
-      });
-      const savedData = await tasksData.save();
-      res.send(savedData);
+app.post('/savefollowtaskstatus', async(req,res)=>{
 
-  }catch (err) {
-    console.log(err);
-  }
+  const {twitterFollow,loggedUserData} = req.body;
 
-  
-}})
+  try {
+    const follow = new followtasks({
+      loggedUserData : loggedUserData,
+      twitterFollow: twitterFollow,
+    });
+    const savedData = await follow.save();
+    res.send(savedData);
+
+}catch (err) {
+  console.log(err);
+
+}
+
+})
+
+app.post('/savewallettaskstatus', async(req,res)=>{
+
+  const {walletAddress,loggedUserData} = req.body;
+
+  try {
+    const walletaddress = new walletaddresstasks({
+      loggedUserData : loggedUserData,
+      walletAddress: walletAddress,
+    });
+    const savedData = await walletaddress.save();
+    res.send(savedData);
+
+}catch (err) {
+  console.log(err);
+
+}
+
+})
+
+
+app.post('/saveretweettaskstatus', async(req,res)=>{
+
+  const {retweet,loggedUserData} = req.body;
+
+  console.log(retweet,loggedUserData);
+
+  try {
+    const retwee = new retweettasks({
+      loggedUserData : loggedUserData,
+      retweet: retweet,
+    });
+    const savedData = await retwee.save();
+    res.send(savedData);
+
+}catch (err) {
+  console.log(err);
+
+}
+
+})
+
+
+
+
+
 
   app.post('/createuser', async (req, res) => {
     const data = req.body;
@@ -231,7 +362,7 @@ app.post('/savetasks',async(req,res) => {
   
     
   
-    console.log(data);
+    // console.log(data);
   
     if (!adminEmail || !password) {
       return res.status(202).json({ message: 'please enter full credentials' });
@@ -265,7 +396,7 @@ app.post('/savetasks',async(req,res) => {
           secure: true,
         });
         // res.status(200).json({message:"registered successfully"})
-        console.log(savedData);
+        // console.log(savedData);
         res.status(200).send(savedData);
       }
     } catch (err) {
@@ -286,8 +417,8 @@ app.post('/savetasks',async(req,res) => {
     const data = req.body;
     const adminEmail = data.adminEmail;
     const password = data.password;
-    console.log('password');
-    console.log(password);
+    // console.log('password');
+    // console.log(password);
   
     if (!adminEmail || !password) {
       return res.status(202).json({ message: 'please enter full credentials' });
@@ -308,8 +439,8 @@ app.post('/savetasks',async(req,res) => {
       if (userPresentORnotPresent) {
   
         const passwordIsMatchOrNot = await bcrypt.compare(password , userPresentORnotPresent.password)
-        console.log('passwordismatchornot');
-        console.log(passwordIsMatchOrNot)
+        // console.log('passwordismatchornot');
+        // console.log(passwordIsMatchOrNot)
   
         if(passwordIsMatchOrNot){
   
