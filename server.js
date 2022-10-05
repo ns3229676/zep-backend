@@ -136,6 +136,19 @@ app.get('/', (req, res) => {
    
   })
 
+  app.post('/fetchtelegramtaskresponse',async (req,res)=>{
+    const {loggedUserData} = req.body;
+
+    const telegramTaskresponse = await telegramtasks.findOne({
+      loggedUserData: loggedUserData,
+    });
+ 
+
+    res.json(telegramTaskresponse)
+
+   
+  })
+
 
 
 
@@ -261,7 +274,7 @@ axios(config)
 .catch(function (error) {
   console.log('error of check follower api')
   console.log(error);
-  res.json({error : 404})
+  res.send(false)
 });
 
 
@@ -287,7 +300,26 @@ axios(config)
   
 
 
+app.post('/savetelegramtaskstatus',async (req,res)=>{
 
+  const {joinTelegram,loggedUserData} = req.body;
+ 
+
+  try {
+    const telegram = new telegramtasks({
+      loggedUserData : loggedUserData,
+      joinTelegram: joinTelegram,
+    });
+    const savedData = await telegram.save();
+    res.send(savedData);
+
+}catch (err) {
+  console.log(err);
+
+}
+
+ 
+})
 
 
 app.post('/savefollowtaskstatus', async(req,res)=>{
