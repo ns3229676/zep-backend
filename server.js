@@ -269,12 +269,13 @@ axios(config)
 
  
 
-  res.send(JSON.stringify(response.data))
+  // res.send(JSON.stringify(response.data))
+  res.send({data : JSON.stringify(response.data) , success : true})
 })
 .catch(function (error) {
   console.log('error of check follower api')
   console.log(error);
-  res.send(false)
+  res.json({success : false})
 });
 
 
