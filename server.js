@@ -264,18 +264,17 @@ const config = {
 
 axios(config)
 .then(function (response) {
-  // console.log(JSON.stringify(response.data));
-  console.log(response.data)
-
- 
+  console.log(JSON.stringify(response.data));
+  // console.log(response.data)
 
   // res.send(JSON.stringify(response.data))
-  res.send({data : JSON.stringify(response.data) , success : true})
+  // res.send({data : JSON.stringify(response.data) , success : 1})
+  res.json({ success : 1})
 })
 .catch(function (error) {
   console.log('error of check follower api')
   console.log(error);
-  res.json({success : false})
+  res.json({success : 0})
 });
 
 
